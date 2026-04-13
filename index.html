@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Visual Arts Studio</title>
+<meta name="description" content="Visual Arts Studio — Subtraction as Language">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+/* ============================================
+   RESET & BASE
+   ============================================ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #F0F0F0;
+  --neu-light: rgba(255, 255, 255, 0.85);
+  --neu-dark-soft: rgba(0, 0, 0, 0.12);
+  --neu-dark: rgba(0, 0, 0, 0.20);
+  --Spacing-XL: 128px;
+  --Spacing-Menu-Desktop: 96px;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: 'Neue Haas Unica W1G', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
+}
+
+/* ============================================
+   HOMEPAGE — MENU
+   ============================================ */
+.page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  z-index: 1;
+}
+
+.page--hidden {
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* Diamond layout container — mobile-first
+   Mobile: 60px dots + 80px gap = 200×200
+   Desktop: 72px dots + 96px gap = 240×240 */
+.diamond {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  width: 200px;
+  height: 200px;
+  gap: 80px;
+  transform: rotate(-45deg);
+  flex-shrink: 0;
+  aspect-ratio: 1 / 1;
+}
+
+/* Individual dot — mobile: 60×60 */
+.dot {
+  width: 60px;
+  height: 60px;
+  border-radius: 192px;
+  background: var(--bg);
+  border: none;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+
+  /* Counter-rotate so hit area stays circular */
+  transform: rotate(45deg) scale(0);
+  opacity: 0;
+
+  /* NEU Sub Form — exact Figma values */
+  box-shadow:
+    8px 8px 12px 0 var(--neu-light) inset,
+    -8px -8px 14px 0 var(--neu-dark-soft) inset,
+    -12px -12px 20px 0 var(--neu-light),
+    12px 12px 20px 0 var(--neu-dark);
+
+  filter: blur(15px);
+}
+
+/* ============================================
+   ENTRY ANIMATION — surface from beneath
+   ============================================ */
+@keyframes surfaceIn {
+  0% {
+    transform: rotate(45deg) scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: rotate(45deg) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(45deg) scale(1);
+    opacity: 1;
+  }
+}
+
+.dot--visible {
+  animation: surfaceIn 0.9s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+/* Stagger: top → right → bottom → left */
+.dot:nth-child(1).dot--visible { animation-delay: 0.1s; }
+.dot:nth-child(2).dot--visible { animation-delay: 0.25s; }
+.dot:nth-child(3).dot--visible { animation-delay: 0.4s; }
+.dot:nth-child(4).dot--visible { animation-delay: 0.55s; }
+
+/* ============================================
+   BREATHING ANIMATION — shadow pulsing
+   ============================================ */
+@keyframes breathe {
+  0%, 100% {
+    box-shadow:
+      8px 8px 12px 0 var(--neu-light) inset,
+      -8px -8px 14px 0 var(--neu-dark-soft) inset,
+      -12px -12px 20px 0 var(--neu-light),
+      12px 12px 20px 0 var(--neu-dark);
+  }
+  50% {
+    box-shadow:
+      10px 10px 16px 0 var(--neu-light) inset,
+      -10px -10px 18px 0 var(--neu-dark-soft) inset,
+      -16px -16px 28px 0 var(--neu-light),
+      16px 16px 28px 0 var(--neu-dark);
+  }
+}
+
+.dot--breathing {
+  animation: breathe 4s ease-in-out infinite;
+  transform: rotate(45deg) scale(1);
+  opacity: 1;
+}
+
+/* Offset each dot's breathing so they feel organic */
+.dot:nth-child(1).dot--breathing { animation-delay: 0s; }
+.dot:nth-child(2).dot--breathing { animation-delay: -1s; }
+.dot:nth-child(3).dot--breathing { animation-delay: -2s; }
+.dot:nth-child(4).dot--breathing { animation-delay: -3s; }
+
+/* ============================================
+   DOT PRESS FEEDBACK — surface responds to touch
+   ============================================ */
+.dot:active {
+  filter: blur(13px);
+  transition: filter 0.15s ease;
+}
+
+/* Dots flatten into surface — pure CSS transition, no keyframes.
+   Transition-based approach avoids the jitter that keyframes cause
+   when interpolating box-shadow + transform simultaneously.
+   The dot simply transitions from its current state to flat. */
+.dot--flattening {
+  pointer-events: none;
+  box-shadow:
+    0 0 0 0 rgba(255,255,255,0) inset,
+    0 0 0 0 rgba(0,0,0,0) inset,
+    0 0 0 0 rgba(255,255,255,0),
+    0 0 0 0 rgba(0,0,0,0) !important;
+  opacity: 0 !important;
+  filter: blur(20px) !important;
+  transform: rotate(45deg) scale(1) !important;
+  transition:
+    box-shadow 0.82s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.82s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.82s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  animation: none !important;
+}
+
+/* Clicked dot goes slightly faster */
+.dot--flattening.dot--clicked {
+  transition-duration: 0.64s !important;
+}
+
+/* Others stagger via transition-delay — smooth, no jitter */
+.dot:nth-child(1).dot--flattening:not(.dot--clicked) { transition-delay: 0.06s !important; }
+.dot:nth-child(2).dot--flattening:not(.dot--clicked) { transition-delay: 0.12s !important; }
+.dot:nth-child(3).dot--flattening:not(.dot--clicked) { transition-delay: 0.18s !important; }
+.dot:nth-child(4).dot--flattening:not(.dot--clicked) { transition-delay: 0.24s !important; }
+
+/* Dots re-emerge when coming back — surface breathes them out */
+@keyframes dotEmerge {
+  0% {
+    box-shadow:
+      0 0 0 0 transparent inset,
+      0 0 0 0 transparent inset,
+      0 0 0 0 transparent,
+      0 0 0 0 transparent;
+    filter: blur(24px);
+    opacity: 0;
+    transform: rotate(45deg) scale(0.9);
+  }
+  50% {
+    opacity: 0.6;
+    filter: blur(18px);
+  }
+  100% {
+    box-shadow:
+      8px 8px 12px 0 var(--neu-light) inset,
+      -8px -8px 14px 0 var(--neu-dark-soft) inset,
+      -12px -12px 20px 0 var(--neu-light),
+      12px 12px 20px 0 var(--neu-dark);
+    filter: blur(15px);
+    opacity: 1;
+    transform: rotate(45deg) scale(1);
+  }
+}
+
+.dot--emerging {
+  animation: dotEmerge 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+}
+
+.dot:nth-child(1).dot--emerging { animation-delay: 0.05s !important; }
+.dot:nth-child(2).dot--emerging { animation-delay: 0.15s !important; }
+.dot:nth-child(3).dot--emerging { animation-delay: 0.25s !important; }
+.dot:nth-child(4).dot--emerging { animation-delay: 0.35s !important; }
+
+/* ============================================
+   CLIP-PATH PAGE TRANSITION
+   Organic timing — the surface opens like skin parting
+   ============================================ */
+.page-reveal {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 10;
+  clip-path: circle(0% at 50% 50%);
+  pointer-events: none;
+  transition: clip-path 1.05s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.page-reveal--active {
+  clip-path: circle(150% at var(--origin-x, 50%) var(--origin-y, 50%));
+  pointer-events: auto;
+}
+
+.page-reveal--collapsing {
+  clip-path: circle(0% at var(--origin-x, 50%) var(--origin-y, 50%));
+  transition: clip-path 0.75s cubic-bezier(0.55, 0, 0.15, 1);
+}
+
+/* ============================================
+   INNER PAGE BASE STYLES
+   Elements emboss out of the flat surface with stagger
+   ============================================ */
+.inner-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.5s;
+}
+
+.page-reveal--active .inner-page {
+  opacity: 1;
+}
+
+/* ============================================
+   PAGE CONTENT — emboss flatten/reform system
+   Text enters by having its text-shadow transition
+   from zero (flat surface) to full emboss.
+   Same effect as thoughts cycling, applied to all pages.
+   ============================================ */
+
+/* NEU text elements: transition-ready */
+.inner-page .neu-text {
+  transition:
+    text-shadow 1.1s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inner-page .neu-body {
+  transition:
+    text-shadow 1.1s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inner-page .back-wrap {
+  transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Back button sub-elements transition independently for smoothness */
+.inner-page .back-wrap__bg {
+  transition:
+    box-shadow 1.1s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 1.1s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inner-page .back-wrap__arrow {
+  transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Flat state — content starts invisible, emboss at zero */
+.inner-page--flat .neu-text {
+  text-shadow:
+    0 0 0 rgba(0,0,0,0),
+    0 0 0 rgba(255,255,255,0),
+    0 0 0 rgba(0,0,0,0),
+    0 0 0 rgba(255,255,255,0),
+    0 0 0 rgba(0,0,0,0),
+    0 0 0 rgba(0,0,0,0) !important;
+  opacity: 0;
+}
+
+.inner-page--flat .neu-body {
+  text-shadow:
+    0 0 0 rgba(0,0,0,0),
+    0 0 0 rgba(255,255,255,0),
+    0 0 0 rgba(0,0,0,0),
+    0 0 0 rgba(255,255,255,0),
+    0 0 0 rgba(0,0,0,0),
+    0 0 0 rgba(0,0,0,0) !important;
+  opacity: 0;
+}
+
+.inner-page--flat .back-wrap {
+  opacity: 0;
+}
+
+/* Back button shadow dissolves into surface — same language as dots */
+.inner-page--flat .back-wrap__bg {
+  box-shadow:
+    0 0 0 0 rgba(255,255,255,0) inset,
+    0 0 0 0 rgba(0,0,0,0) inset,
+    0 0 0 0 rgba(255,255,255,0),
+    0 0 0 0 rgba(0,0,0,0);
+  filter: blur(20px);
+  opacity: 0;
+}
+
+.inner-page--flat .back-wrap__arrow {
+  opacity: 0;
+}
+
+/* Stagger: each element starts its transition slightly later */
+.inner-page .neu-text:first-child,
+.inner-page h1 {
+  transition-delay: 0.1s;
+}
+.inner-page .neu-text:nth-child(2),
+.inner-page h2 {
+  transition-delay: 0.25s;
+}
+.inner-page .neu-body,
+.inner-page p {
+  transition-delay: 0.35s;
+}
+.inner-page .back-wrap {
+  transition-delay: 0.5s;
+}
+.inner-page .work-body {
+  transition-delay: 0.25s;
+}
+
+/* ============================================
+   NEUMORPHIC TEXT — exact Figma "NEU Headings"
+   6 drop shadows via text-shadow
+   2 inner shadows via SVG filter
+   ============================================ */
+.neu-text {
+  color: #F0F0F0;
+  text-align: center;
+  text-shadow:
+    0 12px 12px rgba(0, 0, 0, 0.04),
+    0 -4px 4px rgba(255, 255, 255, 0.65),
+    0 6px 6px rgba(0, 0, 0, 0.04),
+    0 -2px 2px rgba(255, 255, 255, 0.60),
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    0 -12px 20px rgba(0, 0, 0, 0.02);
+  font-weight: 700;
+  line-height: 130%;
+  letter-spacing: -0.4px;
+  filter: url(#neuTextInner);
+}
+
+/* ============================================
+   NEUMORPHIC BODY TEXT — "NEU Body" from Figma
+   Lighter shadow set for smaller, more legible text
+   ============================================ */
+.neu-body {
+  color: #F0F0F0;
+  text-align: center;
+  text-shadow:
+    0 6px 6px rgba(0, 0, 0, 0.04),
+    0 -2px 2px rgba(255, 255, 255, 0.35),
+    0 3px 4px rgba(0, 0, 0, 0.07),
+    0 -1px 1px rgba(255, 255, 255, 0.60),
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 -6px 10px rgba(0, 0, 0, 0.02);
+  font-weight: 700;
+  line-height: normal;
+  filter: url(#neuBodyInner);
+}
+
+/* ============================================
+   STATEMENT PAGE — exact Figma layout
+   ============================================ */
+.statement-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--Spacing-XL);
+  flex-shrink: 0;
+}
+
+.statement-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  text-align: center;
+}
+
+.statement-content .neu-text {
+  /* Mobile/H1 — 40px / 130% */
+  font-size: 40px;
+  line-height: 130%;
+  letter-spacing: -0.4px;
+}
+
+@media (min-width: 768px) {
+  .statement-content .neu-text {
+    /* Desktop/H1 — 48px / 125% */
+    font-size: 48px;
+    line-height: 125%;
+    letter-spacing: -0.48px;
+  }
+}
+
+/* ============================================
+   BACK BUTTON — layered: blurred bg + crisp arrow
+   ============================================ */
+.back-wrap {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The blurred neumorphic circle */
+.back-wrap__bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 192px;
+  background: var(--bg);
+  box-shadow:
+    8px 8px 12px 0 var(--neu-light) inset,
+    -8px -8px 14px 0 var(--neu-dark-soft) inset,
+    -12px -12px 20px 0 var(--neu-light),
+    12px 12px 20px 0 var(--neu-dark);
+  filter: blur(15px);
+}
+
+.back-wrap:active .back-wrap__bg {
+  filter: blur(13px);
+}
+
+/* The crisp arrow overlay — NOT blurred */
+.back-wrap__arrow {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+/* Arrow gets the full NEU treatment — matching heading emboss depth.
+   Stronger opacities than the Figma spec to compensate for
+   drop-shadow rendering vs box-shadow (drop-shadow is softer) */
+.back-wrap__arrow svg {
+  filter: url(#neuBodyInner)
+    drop-shadow(0 6px 6px rgba(0, 0, 0, 0.10))
+    drop-shadow(0 -2px 2px rgba(255, 255, 255, 0.70))
+    drop-shadow(0 3px 4px rgba(0, 0, 0, 0.14))
+    drop-shadow(0 -1px 1px rgba(255, 255, 255, 0.80))
+    drop-shadow(0 1px 2px rgba(0, 0, 0, 0.12))
+    drop-shadow(0 -6px 10px rgba(0, 0, 0, 0.05));
+}
+
+/* Absolute positioned variant */
+.back-wrap--absolute {
+  position: absolute;
+  bottom: 12vh;
+  left: 50%;
+  margin-left: -36px;
+}
+
+/* Flow variant: sits inside flex column */
+.back-wrap--flow {
+  position: relative;
+}
+
+/* Legacy .back-btn kept for simple dot-only buttons (no arrow) */
+.back-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 192px;
+  background: var(--bg);
+  border: none;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    8px 8px 12px 0 var(--neu-light) inset,
+    -8px -8px 14px 0 var(--neu-dark-soft) inset,
+    -12px -12px 20px 0 var(--neu-light),
+    12px 12px 20px 0 var(--neu-dark);
+  filter: blur(15px);
+  flex-shrink: 0;
+}
+
+.back-btn:active {
+  filter: blur(13px);
+}
+
+/* ============================================
+   PAGE 3 — CONTACT
+   Simple email display — same structure as Thoughts
+   ============================================ */
+.contact-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15vh 24px;
+}
+
+.contact-title {
+  font-size: 40px;
+  flex-shrink: 0;
+}
+
+.contact-email {
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .contact-page {
+    padding: 12vh 96px;
+  }
+  .contact-title {
+    font-size: 48px;
+  }
+  .contact-email {
+    font-size: 40px;
+  }
+}
+
+/* ============================================
+   PAGE 4 — WORK
+   Minimal text page — same language as Thoughts
+   ============================================ */
+.work-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15vh 24px;
+}
+
+.work-title {
+  font-size: 40px;
+  flex-shrink: 0;
+}
+
+.work-body {
+  font-size: 28px;
+  line-height: 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  gap: 0;
+}
+
+@media (min-width: 768px) {
+  .work-page {
+    padding: 12vh 96px;
+  }
+  .work-title {
+    font-size: 48px;
+  }
+  .work-body {
+    font-size: 40px;
+    line-height: 50px;
+    max-width: 560px;
+  }
+}
+
+/* ============================================
+   PAGE 5 — THOUGHTS
+   Fixed title at top, fixed button at bottom,
+   cycling text floats in the living centre
+   ============================================ */
+.thoughts-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15vh 24px;
+}
+
+.thoughts-title {
+  font-size: 40px;
+  flex-shrink: 0;
+}
+
+/* The cycling thought — lives in the breathing centre.
+   The emboss (text-shadow + filter) is what transitions,
+   so it feels like the impression itself flattens into
+   the surface and a new one slowly presses out — like skin. */
+.thought-text {
+  font-size: 28px;
+  line-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  /* Transition the emboss itself — shadows + opacity */
+  transition:
+    text-shadow 1.1s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+}
+
+/* Morphing out — the emboss flattens to nothing, text becomes invisible surface */
+.thought-text--out {
+  text-shadow:
+    0 0 0 rgba(0, 0, 0, 0),
+    0 0 0 rgba(255, 255, 255, 0),
+    0 0 0 rgba(0, 0, 0, 0),
+    0 0 0 rgba(255, 255, 255, 0),
+    0 0 0 rgba(0, 0, 0, 0),
+    0 0 0 rgba(0, 0, 0, 0) !important;
+  opacity: 0;
+  transition:
+    text-shadow 0.9s cubic-bezier(0.4, 0, 0.6, 1),
+    opacity 0.9s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* Morphing in — starts flat, the transition back to .thought-text
+   makes the emboss slowly press out of the surface */
+.thought-text--in {
+  text-shadow:
+    0 0 0 rgba(0, 0, 0, 0),
+    0 0 0 rgba(255, 255, 255, 0),
+    0 0 0 rgba(0, 0, 0, 0),
+    0 0 0 rgba(255, 255, 255, 0),
+    0 0 0 rgba(0, 0, 0, 0),
+    0 0 0 rgba(0, 0, 0, 0) !important;
+  opacity: 0;
+}
+
+@media (min-width: 768px) {
+  .thoughts-page {
+    padding: 12vh 96px;
+  }
+  .thoughts-title {
+    font-size: 48px;
+  }
+  .thought-text {
+    font-size: 40px;
+    line-height: 50px;
+    max-width: 560px;
+  }
+}
+
+/* ============================================
+   RESPONSIVE — desktop: larger dots & diamond
+   ============================================ */
+@media (min-width: 768px) {
+  .diamond {
+    width: 240px;
+    height: 240px;
+    gap: 96px;
+  }
+  .dot {
+    width: 72px;
+    height: 72px;
+  }
+}
+</style>
+</head>
+<body>
+
+  <!-- SVG filter for inner text shadows (invisible, referenced by CSS) -->
+  <svg width="0" height="0" style="position:absolute;pointer-events:none">
+    <defs>
+      <filter id="neuTextInner" x="-20%" y="-20%" width="140%" height="140%">
+        <!-- Invert alpha: text becomes transparent, outside becomes opaque -->
+        <feComponentTransfer in="SourceAlpha" result="invertAlpha">
+          <feFuncA type="table" tableValues="1 0"/>
+        </feComponentTransfer>
+
+        <!-- Inner shadow 1: y=-2, blur=2, black 9%
+             Soft dark edge at bottom inside of letterforms -->
+        <feOffset in="invertAlpha" dx="0" dy="-2" result="darkOffset"/>
+        <feGaussianBlur in="darkOffset" stdDeviation="1" result="darkBlur"/>
+        <feFlood flood-color="#000000" flood-opacity="0.09" result="darkColor"/>
+        <feComposite in="darkColor" in2="darkBlur" operator="in" result="darkShadow"/>
+        <feComposite in="darkShadow" in2="SourceAlpha" operator="in" result="darkInner"/>
+
+        <!-- Inner shadow 2: y=2, blur=3, white 60%
+             Bright edge at top inside of letterforms -->
+        <feOffset in="invertAlpha" dx="0" dy="2" result="lightOffset"/>
+        <feGaussianBlur in="lightOffset" stdDeviation="1.5" result="lightBlur"/>
+        <feFlood flood-color="#FFFFFF" flood-opacity="0.60" result="lightColor"/>
+        <feComposite in="lightColor" in2="lightBlur" operator="in" result="lightShadow"/>
+        <feComposite in="lightShadow" in2="SourceAlpha" operator="in" result="lightInner"/>
+
+        <!-- Merge: original rendering + both inner shadows -->
+        <feMerge>
+          <feMergeNode in="SourceGraphic"/>
+          <feMergeNode in="darkInner"/>
+          <feMergeNode in="lightInner"/>
+        </feMerge>
+      </filter>
+
+      <!-- NEU Body / Arrow inner shadows
+           (i)  y=-1, blur=2, black 10%
+           (ii) y=1,  blur=2, white 67% -->
+      <filter id="neuBodyInner" x="-20%" y="-20%" width="140%" height="140%">
+        <feComponentTransfer in="SourceAlpha" result="invertAlpha">
+          <feFuncA type="table" tableValues="1 0"/>
+        </feComponentTransfer>
+
+        <!-- Inner shadow 1: y=-1, blur=2, black 10% -->
+        <feOffset in="invertAlpha" dx="0" dy="-1" result="darkOffset"/>
+        <feGaussianBlur in="darkOffset" stdDeviation="1" result="darkBlur"/>
+        <feFlood flood-color="#000000" flood-opacity="0.10" result="darkColor"/>
+        <feComposite in="darkColor" in2="darkBlur" operator="in" result="darkShadow"/>
+        <feComposite in="darkShadow" in2="SourceAlpha" operator="in" result="darkInner"/>
+
+        <!-- Inner shadow 2: y=1, blur=2, white 67% -->
+        <feOffset in="invertAlpha" dx="0" dy="1" result="lightOffset"/>
+        <feGaussianBlur in="lightOffset" stdDeviation="1" result="lightBlur"/>
+        <feFlood flood-color="#FFFFFF" flood-opacity="0.67" result="lightColor"/>
+        <feComposite in="lightColor" in2="lightBlur" operator="in" result="lightShadow"/>
+        <feComposite in="lightShadow" in2="SourceAlpha" operator="in" result="lightInner"/>
+
+        <feMerge>
+          <feMergeNode in="SourceGraphic"/>
+          <feMergeNode in="darkInner"/>
+          <feMergeNode in="lightInner"/>
+        </feMerge>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- ========================================
+       PAGE 1 — HOMEPAGE / MENU
+       ======================================== -->
+  <div class="page" id="homepage">
+    <!-- Diamond: 2×2 flex grid rotated -45deg
+         After rotation the positions map:
+         [1]=LEFT  [2]=TOP
+         [3]=BOTTOM [4]=RIGHT -->
+    <div class="diamond">
+      <button class="dot" data-page="portfolio" aria-label="Portfolio"></button>
+      <button class="dot" data-page="statement" aria-label="Statement"></button>
+      <button class="dot" data-page="contact" aria-label="Contact"></button>
+      <button class="dot" data-page="thoughts" aria-label="Thoughts"></button>
+    </div>
+  </div>
+
+  <!-- ========================================
+       PAGE REVEAL OVERLAY (clip-path transition)
+       ======================================== -->
+  <div class="page-reveal" id="pageReveal">
+
+    <!-- Page 2 — Statement -->
+    <div class="inner-page inner-page--flat" id="page-statement" style="display:none;">
+      <div class="statement-content">
+        <div class="statement-text">
+          <h1 class="neu-text">Visual Arts<br>Studio</h1>
+          <h2 class="neu-text">Subtraction as<br>Language</h2>
+        </div>
+        <div class="back-wrap back-wrap--flow" role="button" tabindex="0" aria-label="Back to menu">
+          <div class="back-wrap__bg"></div>
+          <div class="back-wrap__arrow">
+            <svg width="25" height="22" viewBox="0 0 25 22" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10.5 1L1 11L10.5 21" fill="none" stroke="#F0F0F0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M1 11H24" fill="none" stroke="#F0F0F0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page 3 — Contact -->
+    <div class="inner-page inner-page--flat" id="page-contact" style="display:none;">
+      <div class="contact-page">
+        <h2 class="neu-text contact-title">Contact</h2>
+        <p class="neu-body contact-email">00@jamesjfrys.studio</p>
+        <div class="back-wrap back-wrap--flow" role="button" tabindex="0" aria-label="Back to menu">
+          <div class="back-wrap__bg"></div>
+          <div class="back-wrap__arrow">
+            <svg width="25" height="22" viewBox="0 0 25 22" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10.5 1L1 11L10.5 21" fill="none" stroke="#F0F0F0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M1 11H24" fill="none" stroke="#F0F0F0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page 4 — Work -->
+    <div class="inner-page inner-page--flat" id="page-portfolio" style="display:none;">
+      <div class="work-page">
+        <h2 class="neu-text work-title">Work</h2>
+        <div class="work-body">
+          <p class="neu-body">On request only:</p>
+          <p class="neu-body">00@jamesjfrys.studio</p>
+        </div>
+        <div class="back-wrap back-wrap--flow" role="button" tabindex="0" aria-label="Back to menu">
+          <div class="back-wrap__bg"></div>
+          <div class="back-wrap__arrow">
+            <svg width="25" height="22" viewBox="0 0 25 22" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10.5 1L1 11L10.5 21" fill="none" stroke="#F0F0F0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M1 11H24" fill="none" stroke="#F0F0F0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page 5 — Thoughts -->
+    <div class="inner-page inner-page--flat" id="page-thoughts" style="display:none;">
+      <div class="thoughts-page">
+        <h2 class="neu-text thoughts-title">Thoughts</h2>
+        <p class="neu-body thought-text" id="thoughtText"></p>
+        <div class="back-wrap back-wrap--flow" role="button" tabindex="0" aria-label="Back to menu">
+          <div class="back-wrap__bg"></div>
+          <div class="back-wrap__arrow">
+            <svg width="25" height="22" viewBox="0 0 25 22" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10.5 1L1 11L10.5 21" fill="none" stroke="#F0F0F0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M1 11H24" fill="none" stroke="#F0F0F0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+(function() {
+  'use strict';
+
+  var dots = document.querySelectorAll('.dot');
+  var reveal = document.getElementById('pageReveal');
+  var currentPage = null;
+  var isTransitioning = false;
+
+  /* ============================================
+     THOUGHTS CYCLING — organic morph
+     ============================================ */
+  var thoughts = [
+    'Silence is the language everything speaks before we interrupt it',
+    'The surface is never the truth, subtraction finds the truth',
+    'The clearest water is the stillest',
+    'Mindfulness changes your relationship with all things',
+    'The world adds noise to survive, I remove it to live',
+    'The world is not an object, it is a process',
+    'What is yours within consciousness is yours in matter',
+    'To subtract is to reveal what was always there'
+  ];
+  var thoughtIndex = 0;
+  var thoughtTimer = null;
+  var thoughtEl = document.getElementById('thoughtText');
+
+  function showThought() {
+    if (!thoughtEl) return;
+    thoughtEl.textContent = thoughts[thoughtIndex];
+  }
+
+  function cycleThought() {
+    if (!thoughtEl) return;
+
+    // Phase 1: fade out current thought (0.9s transition)
+    thoughtEl.classList.add('thought-text--out');
+
+    // Phase 2: wait for full fade-out + tiny clean pause, then swap
+    setTimeout(function() {
+      thoughtIndex = (thoughtIndex + 1) % thoughts.length;
+      thoughtEl.textContent = thoughts[thoughtIndex];
+
+      // Start from flat state
+      thoughtEl.classList.remove('thought-text--out');
+      thoughtEl.classList.add('thought-text--in');
+      void thoughtEl.offsetWidth;
+
+      // Phase 3: fade in new thought (1.1s transition)
+      thoughtEl.classList.remove('thought-text--in');
+    }, 1050);
+  }
+
+  function startThoughtsCycle() {
+    showThought();
+    thoughtTimer = setInterval(cycleThought, 6000);
+  }
+
+  function stopThoughtsCycle() {
+    if (thoughtTimer) { clearInterval(thoughtTimer); thoughtTimer = null; }
+    thoughtIndex = 0;
+  }
+
+
+  /* ============================================
+     ENTRY ANIMATION — dots surface from beneath
+     ============================================ */
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      dots.forEach(function(dot) { dot.classList.add('dot--visible'); });
+      setTimeout(function() {
+        dots.forEach(function(dot) {
+          dot.classList.remove('dot--visible');
+          void dot.offsetWidth;
+          dot.classList.add('dot--breathing');
+        });
+      }, 1600);
+    }, 200);
+  });
+
+  /* ============================================
+     DOT CLICK → ORGANIC PAGE OPEN
+     ============================================ */
+  dots.forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      if (isTransitioning) return;
+      isTransitioning = true;
+
+      var pageName = dot.getAttribute('data-page');
+      var pageEl = document.getElementById('page-' + pageName);
+      if (!pageEl) { isTransitioning = false; return; }
+
+      var rect = dot.getBoundingClientRect();
+      var originX = ((rect.left + rect.width / 2) / window.innerWidth * 100) + '%';
+      var originY = ((rect.top + rect.height / 2) / window.innerHeight * 100) + '%';
+      reveal.style.setProperty('--origin-x', originX);
+      reveal.style.setProperty('--origin-y', originY);
+
+      // Phase 1: Stop breathing, set resting state
+      dots.forEach(function(d) {
+        d.classList.remove('dot--breathing');
+        d.style.transform = 'rotate(45deg) scale(1)';
+        d.style.opacity = '1';
+        d.style.filter = 'blur(15px)';
+        d.style.boxShadow = '8px 8px 12px 0 var(--neu-light) inset, -8px -8px 14px 0 var(--neu-dark-soft) inset, -12px -12px 20px 0 var(--neu-light), 12px 12px 20px 0 var(--neu-dark)';
+      });
+      void dot.offsetWidth;
+
+      // Phase 2: Flatten
+      dot.classList.add('dot--clicked');
+      dots.forEach(function(d) {
+        d.classList.add('dot--flattening');
+        d.style.transform = ''; d.style.opacity = '';
+        d.style.filter = ''; d.style.boxShadow = '';
+      });
+
+      // Phase 3: Reveal page
+      setTimeout(function() {
+        pageEl.style.display = 'flex';
+        currentPage = pageEl;
+
+        if (pageName === 'thoughts') startThoughtsCycle();
+
+        requestAnimationFrame(function() {
+          reveal.classList.add('page-reveal--active');
+          setTimeout(function() {
+            pageEl.classList.remove('inner-page--flat');
+          }, 300);
+        });
+      }, 450);
+
+      setTimeout(function() { isTransitioning = false; }, 1650);
+    });
+  });
+
+  /* ============================================
+     BACK — all pages return to homepage
+     ============================================ */
+  function handleBackToHome() {
+    if (isTransitioning) return;
+    isTransitioning = true;
+
+    stopThoughtsCycle();
+
+    if (currentPage) currentPage.classList.add('inner-page--flat');
+
+    setTimeout(function() {
+      reveal.classList.remove('page-reveal--active');
+      reveal.classList.add('page-reveal--collapsing');
+    }, 450);
+
+    setTimeout(function() {
+      reveal.classList.remove('page-reveal--collapsing');
+      document.querySelectorAll('.inner-page').forEach(function(p) {
+        p.style.display = 'none';
+        p.classList.add('inner-page--flat');
+      });
+      currentPage = null;
+
+      dots.forEach(function(d) {
+        d.classList.remove('dot--flattening', 'dot--clicked', 'dot--breathing');
+        void d.offsetWidth;
+        d.classList.add('dot--emerging');
+      });
+
+      setTimeout(function() {
+        dots.forEach(function(d) {
+          d.classList.remove('dot--emerging');
+          void d.offsetWidth;
+          d.classList.add('dot--breathing');
+        });
+        isTransitioning = false;
+      }, 1050);
+    }, 1300);
+  }
+
+  // Bind all back buttons to go home
+  document.querySelectorAll('.back-btn, .back-wrap').forEach(function(el) {
+    el.addEventListener('click', handleBackToHome);
+    el.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleBackToHome();
+      }
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>
