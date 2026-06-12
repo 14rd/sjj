@@ -474,23 +474,23 @@ html, body {
   flex-shrink: 0;
 }
 
-.statement-sub {
-  font-size: 40px;
-  line-height: 130%;
-  letter-spacing: -0.4px;
-  flex: 1;
+.statement-about {
+  font-size: 28px;
   display: flex;
   align-items: center;
+  justify-content: center;
   text-align: center;
+  flex: 1;
+  width: 100%;
 }
 
 @media (min-width: 768px) {
-  .statement-heading,
-  .statement-sub {
+  .statement-heading {
     font-size: 48px;
     line-height: 125%;
     letter-spacing: -0.48px;
   }
+  .statement-about { font-size: 40px; }
 }
 
 /* ============================================
@@ -614,28 +614,44 @@ html, body {
   flex-shrink: 0;
 }
 
-.work-body {
-  font-size: 28px;
-  line-height: 34px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+.gallery-stage {
   flex: 1;
   width: 100%;
-  max-width: 340px;
-  margin: 0 auto;
-  gap: 0;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.gallery-wrapper {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+.gallery-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+}
+
+.gallery-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: translateZ(0);
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-backface-visibility: hidden;
 }
 
 @media (min-width: 768px) {
   .work-title { font-size: 48px; }
-  .work-body {
-    font-size: 40px;
-    line-height: 50px;
-    max-width: 560px;
-  }
 }
 
 /* ============================================
@@ -812,11 +828,11 @@ html, body {
        ======================================== -->
   <div class="page-reveal" id="pageReveal">
 
-    <!-- Page 2 — Statement -->
+    <!-- Page 2 — About -->
     <div class="inner-page inner-page--flat" id="page-statement" style="display:none;">
       <div class="statement-page">
-        <h1 class="neu-text statement-heading">Visual Arts<br>Studio</h1>
-        <h2 class="neu-text statement-sub">Subtraction as<br>Language</h2>
+        <h1 class="neu-text statement-heading">About</h1>
+        <p class="neu-body statement-about">Artist-led studio working<br>in subtraction. We remove<br>everything that isn't essential.<br>Founded by James Jefferys.</p>
         <div class="back-wrap back-wrap--flow" role="button" tabindex="0" aria-label="Back to menu">
           <div class="back-wrap__bg"></div>
           <div class="back-wrap__arrow">
@@ -846,13 +862,12 @@ html, body {
       </div>
     </div>
 
-    <!-- Page 4 — Work -->
+    <!-- Page 4 — Gallery -->
     <div class="inner-page inner-page--flat" id="page-portfolio" style="display:none;">
       <div class="work-page">
-        <h2 class="neu-text work-title">Work</h2>
-        <div class="work-body">
-          <p class="neu-body">On request only:</p>
-          <p class="neu-body">00@jamesjfrys.studio</p>
+        <h2 class="neu-text work-title">Gallery</h2>
+        <div class="gallery-stage" id="galleryStage">
+          <div class="gallery-wrapper" id="galleryWrapper"></div>
         </div>
         <div class="back-wrap back-wrap--flow" role="button" tabindex="0" aria-label="Back to menu">
           <div class="back-wrap__bg"></div>
@@ -949,6 +964,199 @@ html, body {
 
 
   /* ============================================
+     3D GALLERY — spatial image carousel
+     ============================================ */
+  var galleryCoverImages = [
+    'assets/covers/CHESS.png',
+    'assets/covers/STUDIOJAMESJEFFERYS.png',
+    'assets/covers/LK001.png',
+    'assets/covers/DININGSET.png',
+    'assets/covers/EROSION.png',
+    'assets/covers/SETTINGSUN.png',
+    'assets/covers/14REDDOOR.png',
+    'assets/covers/VICMENSA.png',
+    'assets/covers/SOTHEBYS.png',
+    'assets/covers/PIZA.png'
+  ];
+
+  var galleryStage = document.getElementById('galleryStage');
+  var galleryWrapper = document.getElementById('galleryWrapper');
+  var galleryCards = [];
+  var galleryN = galleryCoverImages.length;
+  var galleryProgress = 0, galleryTarget = 0, galleryVelocity = 0;
+  var galleryMouse = { x: 0.5, y: 0.5 };
+  var galleryRaf = null;
+  var galleryRunning = false;
+  var galleryMobile = window.innerWidth <= 768;
+
+  (function buildCards() {
+    for (var i = 0; i < galleryN; i++) {
+      var card = document.createElement('div');
+      card.className = 'gallery-card';
+      var cw = galleryMobile ? 200 : 380;
+      var ch = galleryMobile ? 131 : 249;
+      card.style.width = cw + 'px';
+      card.style.height = ch + 'px';
+      var img = document.createElement('img');
+      img.src = galleryCoverImages[i];
+      img.alt = '';
+      img.draggable = false;
+      card.appendChild(img);
+      galleryWrapper.appendChild(card);
+      galleryCards.push(card);
+    }
+  })();
+
+  function galleryTick(t) {
+    if (!galleryRunning) return;
+    var mobile = galleryMobile;
+    var spreadX = mobile ? 145 : 280;
+    var n = galleryN;
+
+    if (!mobile) {
+      var mx = galleryMouse.x, dx = mx - 0.5;
+      var sign = dx > 0 ? 1 : (dx < 0 ? -1 : 0);
+      var mag = Math.max(0, Math.abs(dx) - 0.28);
+      if (mag > 0) galleryTarget += sign * mag * mag * 2.0 * (16 / 1000);
+    }
+
+    if (Math.abs(galleryVelocity) > 0.0001) {
+      galleryTarget += galleryVelocity;
+      galleryVelocity *= 0.94;
+    }
+
+    var delta = galleryTarget - galleryProgress;
+    if (Math.abs(delta) > 0.0005) {
+      galleryProgress += delta * 0.09;
+    } else {
+      galleryProgress = galleryTarget;
+    }
+
+    var progress = galleryProgress;
+
+    if (galleryWrapper) {
+      var mx2 = galleryMouse.x, my2 = galleryMouse.y;
+      var ts = mobile ? 0.6 : 1;
+      galleryWrapper.style.transform = 'translate3d(' + ((mx2-0.5)*28*ts) + 'px,' + ((my2-0.5)*18*ts) + 'px,0) rotateX(' + (-(my2-0.5)*8*ts) + 'deg) rotateY(' + ((mx2-0.5)*12*ts) + 'deg)';
+    }
+
+    for (var i = 0; i < n; i++) {
+      var el = galleryCards[i]; if (!el) continue;
+      var o = i - progress;
+      while (o > n / 2) o -= n;
+      while (o < -n / 2) o += n;
+      el.style.transform = 'translate3d(calc(-50% + ' + (o*spreadX) + 'px),calc(-50% + ' + (((((i%n)+n)%n)*53)%130-65+o*6) + 'px),' + (-Math.abs(o)*(mobile?150:220)) + 'px) rotate(' + (Math.sin(i*1.3)*3.2) + 'deg)';
+      var absO = Math.abs(o);
+      el.style.opacity = absO > 5 ? '0' : absO > 3 ? String(1 - (absO - 3) / 2) : '1';
+      var baseZ = 1000 - Math.abs(Math.round(o*10));
+      el.style.zIndex = baseZ;
+    }
+
+    galleryRaf = requestAnimationFrame(galleryTick);
+  }
+
+  function startGallery() {
+    if (galleryRunning) return;
+    galleryMobile = window.innerWidth <= 768;
+    var startIdx = Math.floor(galleryN / 2);
+    galleryProgress = startIdx;
+    galleryTarget = startIdx;
+    galleryVelocity = 0;
+    galleryMouse = { x: 0.5, y: 0.5 };
+    galleryRunning = true;
+
+    var cw = galleryMobile ? 200 : 380;
+    var ch = galleryMobile ? 131 : 249;
+    for (var i = 0; i < galleryCards.length; i++) {
+      galleryCards[i].style.width = cw + 'px';
+      galleryCards[i].style.height = ch + 'px';
+    }
+
+    galleryStage.style.perspective = galleryMobile ? '1200px' : '1800px';
+    galleryStage.style.perspectiveOrigin = '50% 50%';
+
+    galleryRaf = requestAnimationFrame(galleryTick);
+
+    galleryStage.addEventListener('wheel', galleryOnWheel, { passive: false });
+    galleryStage.addEventListener('mousedown', galleryOnDown);
+    window.addEventListener('mousemove', galleryOnDragMove);
+    window.addEventListener('mouseup', galleryOnUp);
+    galleryStage.addEventListener('touchstart', galleryOnDown, { passive: true });
+    window.addEventListener('touchmove', galleryOnDragMove, { passive: true });
+    window.addEventListener('touchend', galleryOnUp, { passive: true });
+    galleryStage.addEventListener('mousemove', galleryOnMouseMove);
+
+    if (galleryMobile) {
+      galleryStage.addEventListener('touchstart', galleryRequestGyro, { once: true });
+    }
+  }
+
+  function stopGallery() {
+    galleryRunning = false;
+    if (galleryRaf) { cancelAnimationFrame(galleryRaf); galleryRaf = null; }
+    galleryStage.removeEventListener('wheel', galleryOnWheel);
+    galleryStage.removeEventListener('mousedown', galleryOnDown);
+    window.removeEventListener('mousemove', galleryOnDragMove);
+    window.removeEventListener('mouseup', galleryOnUp);
+    galleryStage.removeEventListener('touchstart', galleryOnDown);
+    window.removeEventListener('touchmove', galleryOnDragMove);
+    window.removeEventListener('touchend', galleryOnUp);
+    galleryStage.removeEventListener('mousemove', galleryOnMouseMove);
+    galleryStage.removeEventListener('touchstart', galleryRequestGyro);
+    window.removeEventListener('deviceorientation', galleryOnOrientation);
+  }
+
+  function galleryOnWheel(e) {
+    e.preventDefault();
+    galleryTarget += (e.deltaY + e.deltaX) * 0.0025;
+  }
+
+  var galleryDragging = false, galleryStartX = 0, galleryStartProg = 0, galleryLastX = 0, galleryLastT = 0;
+  function galleryOnDown(e) {
+    galleryDragging = true; galleryVelocity = 0;
+    var cx = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+    galleryStartX = cx; galleryLastX = cx; galleryLastT = performance.now(); galleryStartProg = galleryTarget;
+  }
+  function galleryOnDragMove(e) {
+    if (!galleryDragging) return;
+    var cx = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+    galleryTarget = galleryStartProg + (galleryStartX - cx) * 0.012;
+    galleryLastX = cx; galleryLastT = performance.now();
+  }
+  function galleryOnUp(e) {
+    if (!galleryDragging) return; galleryDragging = false;
+    var cx = e.clientX != null ? e.clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : galleryLastX);
+    var dt = performance.now() - galleryLastT;
+    if (dt > 0 && dt < 100) galleryVelocity = (galleryLastX - cx) / dt * 0.3;
+  }
+  function galleryOnMouseMove(e) {
+    var r = galleryStage.getBoundingClientRect();
+    galleryMouse = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
+  }
+
+  var galleryGyroActive = false;
+  function galleryOnOrientation(e) {
+    var gamma = e.gamma || 0;
+    var beta = e.beta || 0;
+    galleryMouse = {
+      x: Math.max(0, Math.min(1, 0.5 + gamma / 60)),
+      y: Math.max(0, Math.min(1, 0.5 + (beta - 45) / 60))
+    };
+  }
+  function galleryRequestGyro() {
+    if (galleryGyroActive) return;
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then(function(state) {
+        if (state === 'granted') { galleryGyroActive = true; window.addEventListener('deviceorientation', galleryOnOrientation); }
+      });
+    } else {
+      galleryGyroActive = true;
+      window.addEventListener('deviceorientation', galleryOnOrientation);
+    }
+  }
+
+
+  /* ============================================
      ENTRY ANIMATION — dots surface from beneath
      ============================================ */
   window.addEventListener('load', function() {
@@ -1006,6 +1214,7 @@ html, body {
         currentPage = pageEl;
 
         if (pageName === 'thoughts') startThoughtsCycle();
+        if (pageName === 'portfolio') startGallery();
 
         requestAnimationFrame(function() {
           reveal.classList.add('page-reveal--active');
@@ -1027,6 +1236,7 @@ html, body {
     isTransitioning = true;
 
     stopThoughtsCycle();
+    stopGallery();
 
     if (currentPage) currentPage.classList.add('inner-page--flat');
 
