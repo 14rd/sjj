@@ -624,6 +624,18 @@ html, body {
   -webkit-user-select: none;
 }
 
+@media (max-width: 767px) {
+  .work-page {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .work-page .work-title,
+  .work-page .back-wrap {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
 .gallery-wrapper {
   position: absolute;
   inset: 0;
@@ -832,7 +844,7 @@ html, body {
     <div class="inner-page inner-page--flat" id="page-statement" style="display:none;">
       <div class="statement-page">
         <h1 class="neu-text statement-heading">About</h1>
-        <p class="neu-body statement-about">Artist-led studio working<br>in subtraction. We remove<br>everything that isn't essential.<br>Founded by James Jefferys.</p>
+        <p class="neu-body statement-about">Artist-led studio working<br>in subtraction. We remove<br>everything that isn't essential.<br>Founded by James&nbsp;Jefferys.</p>
         <div class="back-wrap back-wrap--flow" role="button" tabindex="0" aria-label="Back to menu">
           <div class="back-wrap__bg"></div>
           <div class="back-wrap__arrow">
@@ -988,6 +1000,8 @@ html, body {
   var galleryRaf = null;
   var galleryRunning = false;
   var galleryMobile = window.innerWidth <= 768;
+  var galleryFade = 0;
+  var galleryFadeTarget = 0;
 
   (function buildCards() {
     for (var i = 0; i < galleryN; i++) {
@@ -1016,23 +1030,30 @@ html, body {
     if (!mobile) {
       var mx = galleryMouse.x, dx = mx - 0.5;
       var sign = dx > 0 ? 1 : (dx < 0 ? -1 : 0);
-      var mag = Math.max(0, Math.abs(dx) - 0.28);
-      if (mag > 0) galleryTarget += sign * mag * mag * 2.0 * (16 / 1000);
+      var mag = Math.max(0, Math.abs(dx) - 0.15);
+      if (mag > 0) galleryTarget += sign * mag * mag * 3.0 * (16 / 1000);
     }
 
     if (Math.abs(galleryVelocity) > 0.0001) {
       galleryTarget += galleryVelocity;
-      galleryVelocity *= 0.94;
+      galleryVelocity *= mobile ? 0.97 : 0.94;
     }
 
     var delta = galleryTarget - galleryProgress;
     if (Math.abs(delta) > 0.0005) {
-      galleryProgress += delta * 0.09;
+      galleryProgress += delta * (mobile ? 0.14 : 0.09);
     } else {
       galleryProgress = galleryTarget;
     }
 
     var progress = galleryProgress;
+
+    var fadeDelta = galleryFadeTarget - galleryFade;
+    if (Math.abs(fadeDelta) > 0.001) {
+      galleryFade += fadeDelta * 0.08;
+    } else {
+      galleryFade = galleryFadeTarget;
+    }
 
     if (galleryWrapper) {
       var mx2 = galleryMouse.x, my2 = galleryMouse.y;
@@ -1045,25 +1066,38 @@ html, body {
       var o = i - progress;
       while (o > n / 2) o -= n;
       while (o < -n / 2) o += n;
-      el.style.transform = 'translate3d(calc(-50% + ' + (o*spreadX) + 'px),calc(-50% + ' + (((((i%n)+n)%n)*53)%130-65+o*6) + 'px),' + (-Math.abs(o)*(mobile?150:220)) + 'px) rotate(' + (Math.sin(i*1.3)*3.2) + 'deg)';
+      var zShift = (1 - galleryFade) * -300;
+      el.style.transform = 'translate3d(calc(-50% + ' + (o*spreadX) + 'px),calc(-50% + ' + (((((i%n)+n)%n)*53)%130-65+o*6) + 'px),' + (-Math.abs(o)*(mobile?150:220) + zShift) + 'px) rotate(' + (Math.sin(i*1.3)*3.2) + 'deg)';
       var absO = Math.abs(o);
-      el.style.opacity = absO > 5 ? '0' : absO > 3 ? String(1 - (absO - 3) / 2) : '1';
+      var distOpacity = absO > 5 ? 0 : absO > 3 ? 1 - (absO - 3) / 2 : 1;
+      el.style.opacity = String(distOpacity * galleryFade);
       var baseZ = 1000 - Math.abs(Math.round(o*10));
       el.style.zIndex = baseZ;
+    }
+
+    if (galleryFade <= 0.001 && galleryFadeTarget === 0) {
+      galleryRunning = false;
+      cancelAnimationFrame(galleryRaf);
+      galleryRaf = null;
+      return;
     }
 
     galleryRaf = requestAnimationFrame(galleryTick);
   }
 
   function startGallery() {
-    if (galleryRunning) return;
     galleryMobile = window.innerWidth <= 768;
     var startIdx = Math.floor(galleryN / 2);
     galleryProgress = startIdx;
     galleryTarget = startIdx;
     galleryVelocity = 0;
     galleryMouse = { x: 0.5, y: 0.5 };
-    galleryRunning = true;
+    galleryFade = 0;
+    galleryFadeTarget = 1;
+    if (!galleryRunning) {
+      galleryRunning = true;
+      galleryRaf = requestAnimationFrame(galleryTick);
+    }
 
     var cw = galleryMobile ? 200 : 380;
     var ch = galleryMobile ? 131 : 249;
@@ -1075,8 +1109,6 @@ html, body {
     galleryStage.style.perspective = galleryMobile ? '1200px' : '1800px';
     galleryStage.style.perspectiveOrigin = '50% 50%';
 
-    galleryRaf = requestAnimationFrame(galleryTick);
-
     galleryStage.addEventListener('wheel', galleryOnWheel, { passive: false });
     galleryStage.addEventListener('mousedown', galleryOnDown);
     window.addEventListener('mousemove', galleryOnDragMove);
@@ -1084,7 +1116,7 @@ html, body {
     galleryStage.addEventListener('touchstart', galleryOnDown, { passive: true });
     window.addEventListener('touchmove', galleryOnDragMove, { passive: true });
     window.addEventListener('touchend', galleryOnUp, { passive: true });
-    galleryStage.addEventListener('mousemove', galleryOnMouseMove);
+    window.addEventListener('mousemove', galleryOnMouseMove);
 
     if (galleryMobile) {
       galleryStage.addEventListener('touchstart', galleryRequestGyro, { once: true });
@@ -1092,8 +1124,7 @@ html, body {
   }
 
   function stopGallery() {
-    galleryRunning = false;
-    if (galleryRaf) { cancelAnimationFrame(galleryRaf); galleryRaf = null; }
+    galleryFadeTarget = 0;
     galleryStage.removeEventListener('wheel', galleryOnWheel);
     galleryStage.removeEventListener('mousedown', galleryOnDown);
     window.removeEventListener('mousemove', galleryOnDragMove);
@@ -1101,7 +1132,7 @@ html, body {
     galleryStage.removeEventListener('touchstart', galleryOnDown);
     window.removeEventListener('touchmove', galleryOnDragMove);
     window.removeEventListener('touchend', galleryOnUp);
-    galleryStage.removeEventListener('mousemove', galleryOnMouseMove);
+    window.removeEventListener('mousemove', galleryOnMouseMove);
     galleryStage.removeEventListener('touchstart', galleryRequestGyro);
     window.removeEventListener('deviceorientation', galleryOnOrientation);
   }
@@ -1120,18 +1151,17 @@ html, body {
   function galleryOnDragMove(e) {
     if (!galleryDragging) return;
     var cx = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-    galleryTarget = galleryStartProg + (galleryStartX - cx) * 0.012;
+    galleryTarget = galleryStartProg + (galleryStartX - cx) * (galleryMobile ? 0.018 : 0.012);
     galleryLastX = cx; galleryLastT = performance.now();
   }
   function galleryOnUp(e) {
     if (!galleryDragging) return; galleryDragging = false;
     var cx = e.clientX != null ? e.clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : galleryLastX);
     var dt = performance.now() - galleryLastT;
-    if (dt > 0 && dt < 100) galleryVelocity = (galleryLastX - cx) / dt * 0.3;
+    if (dt > 0 && dt < 100) galleryVelocity = (galleryLastX - cx) / dt * (galleryMobile ? 0.5 : 0.3);
   }
   function galleryOnMouseMove(e) {
-    var r = galleryStage.getBoundingClientRect();
-    galleryMouse = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
+    galleryMouse = { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight };
   }
 
   var galleryGyroActive = false;
